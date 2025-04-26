@@ -49,15 +49,9 @@ npm run dev
 La aplicación lee su configuración desde un archivo `.env` con la siguiente estructura:
 
 ```env
-# Configuración de Base de Datos PostgreSQL
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=portero_virtual
-DB_USER=postgres
-DB_PASSWORD=postgres
-
-# Configuración de SQLite (fallback)
+# Base de datos: SQLite
 SQLITE_PATH=./data/local.db
+SQL_DEBUG=false
 
 # Modo de depuración
 DEBUG=true
@@ -75,7 +69,7 @@ PORT=3000
 │   ├── components/      # Componentes React (SelectorRol, CallModal, etc.)
 │   ├── layouts/         # Plantillas de páginas
 │   ├── lib/             # Lógica de negocio
-│   │   ├── db/          # Acceso a datos (PostgreSQL/SQLite)
+│   │   ├── db/          # Acceso a datos (SQLite)
 │   │   └── types/       # Definiciones de TypeScript
 │   ├── pages/
 │   │   ├── api/         # Endpoints de API REST
@@ -84,17 +78,19 @@ PORT=3000
 │   └── styles/          # Estilos globales y Tailwind CSS
 ├── .env                 # Variables de entorno
 ├── astro.config.mjs     # Configuración de Astro
-├── docker-compose.yml   # Configuración de Docker para PostgreSQL
+
 └── tailwind.config.mjs  # Configuración de Tailwind CSS
 ```
 
 ## Base de Datos
 
-El sistema utiliza PostgreSQL como motor principal, con la capacidad de cambiar automáticamente a SQLite cuando PostgreSQL no está disponible. Esta arquitectura dual permite:
+La aplicación utiliza SQLite como motor de base de datos, proporcionando las siguientes ventajas:
 
-1. **Alta disponibilidad**: Garantiza que la aplicación siga funcionando incluso si la base de datos principal falla
-2. **Funcionamiento offline**: Capacidad de operar con datos locales cuando no hay conexión
-3. **Sincronización**: Los datos se sincronizan cuando la conexión se restablece
+1. **Simplicidad**: No requiere configuración de servidores o servicios externos
+2. **Portabilidad**: Base de datos autocontenida en un único archivo
+3. **Rendimiento**: Excelente desempeño para aplicaciones con un volumen moderado de conexiones
+4. **Confiabilidad**: Transacciones ACID y funcionamiento robusto
+5. **Facilidad de despliegue**: Sin dependencias externas para instalación
 
 ### Esquema de Base de Datos
 

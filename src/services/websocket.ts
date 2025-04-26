@@ -1,13 +1,13 @@
 import { Server } from 'socket.io';
 import type { Server as HTTPServer } from 'http';
-import type { PostgresNotificationPayload } from '../lib/types/database';
+import type { DatabaseNotificationPayload } from '../lib/types/database';
 import { initNotificationListener } from '../lib/db/client';
 import logger from './logger';
 
 let io: Server | null = null;
 
 /**
- * Inicializa el servidor WebSocket y lo conecta a las notificaciones de PostgreSQL
+ * Inicializa el servidor WebSocket y lo conecta a las notificaciones de base de datos
  * @param httpServer Servidor HTTP de Astro/Node.js
  */
 export function initWebSocketServer(httpServer: HTTPServer) {
@@ -40,10 +40,10 @@ export function initWebSocketServer(httpServer: HTTPServer) {
     });
   });
   
-  // Intentar conectar a las notificaciones de PostgreSQL
+  // Intentar conectar a las notificaciones de la base de datos
   try {
-    // Iniciar listener de notificaciones de PostgreSQL
-    initNotificationListener((payload: PostgresNotificationPayload) => {
+    // Iniciar listener de notificaciones de la base de datos
+    initNotificationListener((payload: DatabaseNotificationPayload) => {
       logger.info(`Notificación recibida: ${JSON.stringify(payload)}`, 'WebSocket');
       
       // Emitir evento según el tipo de notificación
@@ -77,7 +77,7 @@ export function initWebSocketServer(httpServer: HTTPServer) {
       logger.error('Error al inicializar el listener de notificaciones', error as Error, 'WebSocket');
     });
     
-    logger.info('Listener de notificaciones PostgreSQL conectado al servidor WebSocket', 'WebSocket');
+    logger.info('Listener de notificaciones de la base de datos conectado al servidor WebSocket', 'WebSocket');
   } catch (error) {
     logger.error('No se pudo conectar el listener de notificaciones', error instanceof Error ? error : new Error(String(error)), 'WebSocket');
     logger.warn('Las actualizaciones en tiempo real pueden no estar disponibles', 'WebSocket');
@@ -101,7 +101,7 @@ export function getWebSocketServer() {
  */
 export function emitToRoom(room: string, event: string, data: any) {
   if (!io) {
-    logger.error(`No se puede emitir al evento ${event}: WebSocket no inicializado`, 'WebSocket');
+    logger.error(`No se puede emitir al evento ${event}: WebSocket no inicializado`, new Error('WebSocket no inicializado'), 'WebSocket');
     return;
   }
   

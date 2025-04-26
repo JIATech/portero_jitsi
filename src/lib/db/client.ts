@@ -4,7 +4,7 @@
  */
 
 import Database from 'better-sqlite3';
-import type { DepartmentRow } from '../types/database';
+import type { DepartmentRow, DatabaseNotificationPayload } from '../types/database';
 import logger from '../../services/logger';
 import 'dotenv/config';
 import * as fs from 'fs';
@@ -165,7 +165,7 @@ export async function query(text: string, params: unknown[] = []): Promise<{ row
       throw new Error('No se pudo inicializar la conexión a SQLite');
     }
     
-    // Convertir la consulta SQL de PostgreSQL a SQLite
+    // Adaptar la consulta SQL para SQLite
     const sqliteCompatibleText = text
       .replace(/NOW\(\)/gi, "datetime('now')")
       .replace(/RETURNING \*/gi, "");
@@ -202,16 +202,59 @@ export async function query(text: string, params: unknown[] = []): Promise<{ row
   }
 }
 
+// Tipo para la función callback de notificaciones
+type NotificationCallback = (payload: DatabaseNotificationPayload) => void;
+
+// Almacenar los callbacks registrados
+const notificationListeners: NotificationCallback[] = [];
+
+/**
+ * Inicializa un listener de notificaciones de la base de datos
+ * @param callback Función a ejecutar cuando ocurre un cambio
+ */
+export async function initNotificationListener(callback: NotificationCallback): Promise<{ catch: (errHandler: (error: Error) => void) => void }> {
+  // Registrar el callback
+  notificationListeners.push(callback);
+  
+  // Retornar un objeto que simula una promesa con método catch para compatibilidad
+  return {
+    catch: (errHandler: (error: Error) => void) => {
+      // No hay operaciones asíncronas que puedan fallar aquí
+    }
+  };
+}
+
 /**
  * Notifica un cambio en un departamento a través de eventos
- * Esta es una versión simplificada que no utiliza PostgreSQL NOTIFY
+ * Esta es una versión simplificada para notificar cambios en SQLite
  */
 export async function notifyDepartmentChange(
   operation: 'INSERT' | 'UPDATE' | 'DELETE',
   record: DepartmentRow
 ): Promise<boolean> {
   logger.info(`Cambio en departamento: ${operation} para ID ${record.id}`, 'Database');
-  // En una implementación completa, aquí se enviaría una notificación por WebSocket
+  
+  // Crear el payload de notificación
+  const payload: DatabaseNotificationPayload = {
+    operation,
+    record,
+    type: 'department_update',
+    data: {
+      id: record.id,
+      name: record.name,
+      status: record.status
+    }
+  };
+  
+  // Notificar a todos los listeners registrados
+  for (const listener of notificationListeners) {
+    try {
+      listener(payload);
+    } catch (error) {
+      logger.error('Error al notificar cambio de departamento', error instanceof Error ? error : new Error(String(error)), 'Database');
+    }
+  }
+  
   return true;
 }
 

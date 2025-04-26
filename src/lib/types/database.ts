@@ -1,5 +1,5 @@
 /**
- * Tipos para la estructura de la base de datos PostgreSQL
+ * Tipos para la estructura de la base de datos SQLite
  */
 
 export interface DepartmentRow {
@@ -14,7 +14,7 @@ export interface DepartmentRow {
 /**
  * Payload para las notificaciones en tiempo real
  */
-export interface PostgresNotificationPayload {
+export interface DatabaseNotificationPayload {
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
   record: DepartmentRow;
   type: string;
