@@ -34,8 +34,8 @@ Portero Virtual es una aplicación web que facilita la comunicación mediante vi
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/portero-virtual.git
-cd portero-virtual
+git clone https://github.com/JIATech/portero_jitsi
+cd portero_jitsi
 
 # Instalar dependencias
 npm install
