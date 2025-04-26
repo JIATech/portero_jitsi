@@ -56,6 +56,10 @@ playwright-report/
 html-report/
 **/__snapshots__/
 
+# Archivos de capturas de pantalla (excepto los de public)
+*.png
+!public/*.png
+
 # Archivos generados durante desarrollo
 .cache/
 public/hot/
