@@ -1,0 +1,350 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CallModal from '../components/CallModal';
+
+// Verificar autenticación en el lado del servidor
+// En una implementación completa, deberíamos manejar sesiones del lado del servidor
+---
+
+<Layout title="Panel del Portero" useJitsi={true}>
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white shadow">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-gray-900">
+          Panel del Portero
+        </h1>
+        <button
+          id="logout-button"
+          class="btn btn-secondary"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+      <!-- Modal de llamada -->
+      <div id="call-modal-container"></div>
+      
+      <div class="card">
+        <h2 style="font-size: 1.125rem; font-weight: 500; color: var(--color-gray-900); margin-bottom: 1rem;">Lista de Departamentos</h2>
+        <div id="departments-container" style="margin-bottom: 1.5rem;">
+          <p style="color: var(--color-gray-500); font-size: 0.875rem;">Cargando departamentos...</p>
+        </div>
+
+        <h2 style="font-size: 1.125rem; font-weight: 500; color: var(--color-gray-900); margin-top: 2rem; margin-bottom: 1rem;">Llamadas Activas</h2>
+        <div id="active-calls-container">
+          <p style="color: var(--color-gray-500); font-size: 0.875rem;">No hay llamadas activas en este momento.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</Layout>
+
+<script>
+  import { connectWebSocket, joinRoom, onDepartmentUpdate } from '../services/websocket-client';
+  import { initCallService, addCallEndedListener, addCallStartedListener, startCall, endCall } from '../services/call-service';
+  
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Verificar autenticación
+    const userType = localStorage.getItem('userType');
+    if (userType !== 'portero') {
+      window.location.href = '/';
+      return;
+    }
+    
+    // Manejar cierre de sesión
+    document.getElementById('logout-button')?.addEventListener('click', () => {
+      localStorage.removeItem('userType');
+      window.location.href = '/';
+    });
+    
+    // Inicializar servicio de llamadas
+    initCallService('portero');
+    
+    // Configurar modal de llamada
+    const callModalContainer = document.getElementById('call-modal-container');
+    let callModalActive = false;
+    let currentCallRoom = '';
+    let currentDepartmentName = '';
+    let currentDepartmentId = 0;
+    
+    // Escuchar eventos de llamada
+    const unsubscribeCallStarted = addCallStartedListener((roomName, withParty) => {
+      console.log('Llamada iniciada:', roomName, withParty);
+      showActiveCall(roomName, withParty);
+    });
+    
+    const unsubscribeCallEnded = addCallEndedListener((roomName) => {
+      console.log('Llamada finalizada:', roomName);
+      if (currentCallRoom === roomName && callModalActive) {
+        hideCallModal();
+      }
+    });
+    
+    // Función para mostrar la llamada activa
+    function showActiveCall(roomName: string, departmentName: string) {
+      if (callModalContainer) {
+        currentCallRoom = roomName;
+        callModalActive = true;
+        
+        callModalContainer.innerHTML = `
+          <div class="fixed inset-0 bg-black bg-opacity-80 z-50 flex flex-col">
+            <div class="bg-primary text-white p-4 flex justify-between items-center">
+              <h3 class="text-lg font-bold">Llamada con ${departmentName}</h3>
+              <button id="end-call-btn" class="btn btn-danger">Finalizar</button>
+            </div>
+            <div class="flex-grow" id="jitsi-container"></div>
+          </div>
+        `;
+        
+        // Agregar event listener al botón de finalizar
+        document.getElementById('end-call-btn')?.addEventListener('click', async () => {
+          try {
+            await endCall();
+            hideCallModal();
+          } catch (error) {
+            console.error('Error al finalizar llamada:', error);
+          }
+        });
+        
+        // Inicializar Jitsi Meet
+        const domain = 'meet.jit.si';
+        const options = {
+          roomName: roomName,
+          width: '100%',
+          height: '100%',
+          parentNode: document.getElementById('jitsi-container'),
+          userInfo: {
+            displayName: 'Portero'
+          },
+          configOverwrite: {
+            prejoinPageEnabled: false,
+            startWithAudioMuted: false,
+            startWithVideoMuted: false
+          },
+          interfaceConfigOverwrite: {
+            TOOLBAR_BUTTONS: [
+              'microphone', 'camera', 'fullscreen', 'chat'
+            ],
+            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+            SHOW_JITSI_WATERMARK: false
+          }
+        };
+        
+        // Crear API de Jitsi Meet
+        try {
+          // @ts-ignore - La librería de Jitsi se carga desde CDN
+          const api = new JitsiMeetExternalAPI(domain, options);
+          
+          // Guardar referencia para poder destruirla después
+          (window as any).jitsiApi = api;
+          
+          // Manejar eventos
+          api.on('videoConferenceLeft', () => {
+            hideCallModal();
+          });
+        } catch (error) {
+          console.error('Error al inicializar Jitsi Meet:', error);
+          hideCallModal();
+        }
+      }
+    }
+    
+    // Función para ocultar el modal de llamada
+    function hideCallModal() {
+      if (callModalContainer) {
+        callModalContainer.innerHTML = '';
+        callModalActive = false;
+        currentCallRoom = '';
+        currentDepartmentName = '';
+        currentDepartmentId = 0;
+        
+        // Destruir API de Jitsi si existe
+        if ((window as any).jitsiApi) {
+          try {
+            (window as any).jitsiApi.dispose();
+            (window as any).jitsiApi = null;
+          } catch (error) {
+            console.error('Error al destruir API de Jitsi:', error);
+          }
+        }
+      }
+    }
+    
+    // Cargar lista de departamentos
+    try {
+      const response = await fetch('/api/departments');
+      if (!response.ok) {
+        throw new Error('Error al cargar departamentos');
+      }
+      
+      const departments = await response.json();
+      const departmentsContainer = document.getElementById('departments-container');
+      
+      if (departmentsContainer && departments.length > 0) {
+        // Limpiar contenedor
+        departmentsContainer.innerHTML = '';
+        
+        // Crear tabla de departamentos
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        
+        // Crear encabezado
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+          <tr style="border-bottom: 1px solid var(--color-gray-200);">
+            <th style="text-align: left; padding: 0.75rem 0.5rem; color: var(--color-gray-700); font-weight: 500;">Nombre</th>
+            <th style="text-align: left; padding: 0.75rem 0.5rem; color: var(--color-gray-700); font-weight: 500;">Estado</th>
+            <th style="text-align: right; padding: 0.75rem 0.5rem; color: var(--color-gray-700); font-weight: 500;">Acciones</th>
+          </tr>
+        `;
+        table.appendChild(thead);
+        
+        // Crear cuerpo de la tabla
+        const tbody = document.createElement('tbody');
+        departments.forEach((dept: { id: number; name: string; status: string }) => {
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid var(--color-gray-200)';
+          tr.setAttribute('data-dept-id', dept.id.toString());
+          
+          // Determinar clase de estado
+          const statusColor = dept.status === 'Available' ? 'var(--color-success)' : 
+                             dept.status === 'Away' ? 'var(--color-warning)' : 
+                             'var(--color-error)';
+          
+          // Determinar texto de estado
+          const statusText = dept.status === 'Available' ? 'Disponible' : 
+                            dept.status === 'Away' ? 'Ausente' : 
+                            'Ocupado';
+          
+          tr.innerHTML = `
+            <td style="padding: 0.75rem 0.5rem;">${dept.name}</td>
+            <td style="padding: 0.75rem 0.5rem;">
+              <span style="display: inline-flex; align-items: center;">
+                <span style="width: 0.5rem; height: 0.5rem; border-radius: 50%; background-color: ${statusColor}; margin-right: 0.5rem;"></span>
+                ${statusText}
+              </span>
+            </td>
+            <td style="padding: 0.75rem 0.5rem; text-align: right;">
+              <button 
+                data-dept-id="${dept.id}" 
+                data-dept-name="${dept.name}"
+                class="btn-call btn-primary" 
+                style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                ${dept.status !== 'Available' ? 'disabled' : ''}
+              >
+                Llamar
+              </button>
+            </td>
+          `;
+          
+          tbody.appendChild(tr);
+        });
+        
+        table.appendChild(tbody);
+        departmentsContainer.appendChild(table);
+        
+        // Agregar event listeners para botones de llamada
+        document.querySelectorAll('.btn-call').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const target = e.currentTarget as HTMLElement;
+            const deptId = target.getAttribute('data-dept-id');
+            const deptName = target.getAttribute('data-dept-name');
+            
+            if (!deptId || !deptName || callModalActive) return;
+            
+            try {
+              currentDepartmentId = parseInt(deptId);
+              currentDepartmentName = deptName;
+              
+              // Iniciar llamada al departamento
+              const callStarted = await startCall({
+                fromId: 'portero',
+                fromName: 'Portero',
+                toDepartmentId: currentDepartmentId,
+                toDepartmentName: currentDepartmentName
+              });
+              
+              if (!callStarted) {
+                console.error('No se pudo iniciar la llamada');
+              }
+            } catch (error) {
+              console.error('Error al iniciar llamada:', error);
+            }
+          });
+        });
+      } else if (departmentsContainer) {
+        departmentsContainer.innerHTML = '<p style="color: var(--color-gray-500); font-size: 0.875rem;">No hay departamentos registrados.</p>';
+      }
+    } catch (error) {
+      console.error('Error al cargar departamentos:', error);
+      const departmentsContainer = document.getElementById('departments-container');
+      if (departmentsContainer) {
+        departmentsContainer.innerHTML = '<p style="color: var(--color-error);">Error al cargar departamentos. Inténtelo de nuevo más tarde.</p>';
+      }
+    }
+    
+    // Inicializar WebSocket para actualizaciones en tiempo real
+    try {
+      // Conectar WebSocket y unirse a la sala 'portero'
+      const socket = connectWebSocket();
+      joinRoom('portero');
+      
+      // Escuchar actualizaciones de departamentos
+      onDepartmentUpdate((update) => {
+        console.log('Actualización de departamento recibida:', update);
+        
+        // Actualizar la tabla de departamentos con los nuevos datos
+        const departmentRow = document.querySelector(`tr[data-dept-id="${update.id}"]`);
+        
+        if (departmentRow) {
+          // Actualizar nombre si cambió
+          if (update.name) {
+            const nameCell = departmentRow.querySelector('td:first-child');
+            if (nameCell) nameCell.textContent = update.name;
+          }
+          
+          // Actualizar estado si cambió
+          if (update.status) {
+            const statusCell = departmentRow.querySelector('td:nth-child(2)');
+            if (statusCell) {
+              const statusColor = update.status === 'Available' ? 'var(--color-success)' : 
+                              update.status === 'Away' ? 'var(--color-warning)' : 
+                              'var(--color-error)';
+              
+              const statusText = update.status === 'Available' ? 'Disponible' : 
+                              update.status === 'Away' ? 'Ausente' : 
+                              'Ocupado';
+              
+              statusCell.innerHTML = `
+                <span style="display: inline-flex; align-items: center;">
+                  <span style="width: 0.5rem; height: 0.5rem; border-radius: 50%; background-color: ${statusColor}; margin-right: 0.5rem;"></span>
+                  ${statusText}
+                </span>
+              `;
+            }
+            
+            // Actualizar botón de llamada
+            const callButton = departmentRow.querySelector('.btn-call');
+            if (callButton) {
+              if (update.status === 'Available') {
+                callButton.removeAttribute('disabled');
+              } else {
+                callButton.setAttribute('disabled', 'true');
+              }
+            }
+          }
+        } else {
+          // Si no existe la fila, recargar toda la lista
+          window.location.reload();
+        }
+      });
+      
+      console.log('WebSocket inicializado correctamente para el portero');
+    } catch (error) {
+      console.error('Error al inicializar WebSocket:', error);
+    }
+  });
+</script>

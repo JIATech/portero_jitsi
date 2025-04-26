@@ -1,0 +1,15 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SelectorRol from '../components/SelectorRol';
+
+// La inicialización de la base de datos se maneja en los endpoints API
+// Estamos usando un enfoque simplificado con CSS personalizado
+---
+
+<Layout title="Inicio de Sesión">
+	<div class="flex flex-col items-center justify-center" style="min-height: 100vh; padding: 1rem;">
+		<div style="width: 100%; max-width: 28rem;">
+			<SelectorRol client:load />
+		</div>
+	</div>
+</Layout>

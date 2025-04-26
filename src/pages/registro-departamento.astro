@@ -1,0 +1,228 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// La inicialización y verificación de la base de datos se hace en los endpoints API
+---
+
+<Layout title="Registro de Departamento">
+  <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <h1 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        Registrar Nuevo Departamento
+      </h1>
+      <p class="mt-2 text-center text-sm text-gray-600">
+        Complete la información para crear un nuevo departamento
+      </p>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <form id="register-form" class="space-y-6">
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700">
+              Nombre del Departamento
+            </label>
+            <div class="mt-1">
+              <input
+                id="name"
+                name="name"
+                type="text"
+                required
+                autocomplete="off"
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Ej: Departamento 101"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">
+              Contraseña
+            </label>
+            <div class="mt-1 relative">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Ingrese contraseña"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="confirmPassword" class="block text-sm font-medium text-gray-700">
+              Confirmar Contraseña
+            </label>
+            <div class="mt-1 relative">
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Confirme contraseña"
+              />
+            </div>
+          </div>
+
+          <div id="error-container" class="hidden bg-red-50 border-l-4 border-red-400 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p id="error-message" class="text-sm text-red-700"></p>
+              </div>
+            </div>
+          </div>
+
+          <div id="success-container" class="hidden bg-green-50 border-l-4 border-green-400 p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p id="success-message" class="text-sm text-green-700"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <button
+              type="submit"
+              class="w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Registrar Departamento
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-6">
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-gray-300"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-2 bg-white text-gray-500">
+                ¿Ya tienes un departamento?
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <a 
+              href="/"
+              class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Volver a Inicio de Sesión
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('register-form');
+    const nameInput = document.getElementById('name') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    const confirmPasswordInput = document.getElementById('confirmPassword') as HTMLInputElement;
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    const successContainer = document.getElementById('success-container');
+    const successMessage = document.getElementById('success-message');
+
+    // Ocultar mensajes al inicio
+    if (errorContainer) errorContainer.classList.add('hidden');
+    if (successContainer) successContainer.classList.add('hidden');
+
+    // Manejar el envío del formulario
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Ocultar mensajes previos
+      if (errorContainer) errorContainer.classList.add('hidden');
+      if (successContainer) successContainer.classList.add('hidden');
+      
+      // Validar campos
+      if (!nameInput || !passwordInput || !confirmPasswordInput) return;
+      
+      const name = nameInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      
+      if (!name) {
+        showError('Por favor, ingrese un nombre de departamento');
+        return;
+      }
+      
+      if (password.length < 4) {
+        showError('La contraseña debe tener al menos 4 caracteres');
+        return;
+      }
+      
+      if (password !== confirmPassword) {
+        showError('Las contraseñas no coinciden');
+        return;
+      }
+      
+      try {
+        // Enviar solicitud a la API
+        const response = await fetch('/api/departments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, password }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          showError(data.error || 'Error al registrar departamento');
+          return;
+        }
+        
+        // Mostrar mensaje de éxito
+        showSuccess(`Departamento "${data.name}" registrado con éxito`);
+        
+        // Limpiar formulario
+        nameInput.value = '';
+        passwordInput.value = '';
+        confirmPasswordInput.value = '';
+        
+        // Opcional: redirigir después de un breve retraso
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 3000);
+      } catch (error) {
+        showError('Error de comunicación con el servidor');
+        console.error('Error:', error);
+      }
+    });
+    
+    // Función para mostrar mensaje de error
+    function showError(message: string) {
+      if (errorContainer && errorMessage) {
+        errorMessage.textContent = message;
+        errorContainer.classList.remove('hidden');
+      }
+    }
+    
+    // Función para mostrar mensaje de éxito
+    function showSuccess(message: string) {
+      if (successContainer && successMessage) {
+        successMessage.textContent = message;
+        successContainer.classList.remove('hidden');
+      }
+    }
+  });
+</script>
